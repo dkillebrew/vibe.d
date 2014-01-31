@@ -41,7 +41,7 @@ class HTTPLogger {
 		synchronized (m_mutex) {
 			m_lineAppender.reset();
 			formatApacheLog(m_lineAppender, m_format, req, res, m_settings);
-			writeLine(m_lineAppender.data);
+			writeLine(m_lineAppender.data.to!string);
 		}
 	}
 
@@ -112,7 +112,7 @@ void formatApacheLog(R)(ref R ln, string format, HTTPServerRequest req, HTTPServ
 					state = State.Directive;
 				}
 				break;
-			case State.Directive: 
+			case State.Directive:
 				if( format[0] == '!' ) {
 					conditional = true;
 					negate = true;
@@ -183,7 +183,7 @@ void formatApacheLog(R)(ref R ln, string format, HTTPServerRequest req, HTTPServ
 						ln.put(to!string(d.total!"msecs"()));
 						break;
 					//case 'e': //Environment variable {variable}
-					//case 'f': //Filename 
+					//case 'f': //Filename
 					case 'h': //Remote host
 						ln.put(req.peer);
 						break;
@@ -198,7 +198,7 @@ void formatApacheLog(R)(ref R ln, string format, HTTPServerRequest req, HTTPServ
 					case 'm': //Request method
 						ln.put(httpMethodString(req.method));
 						break;
-					case 'o': //Response header {header}						
+					case 'o': //Response header {header}
 						enforce(key, "header name missing");
 						if( auto pv = key in res.headers ) ln.put(*pv);
 						else ln.put("-");
