@@ -140,7 +140,10 @@ class MongoConnection {
 			m_conn = connectTCP(m_settings.hosts[0].name, m_settings.hosts[0].port);
 			if (m_settings.ssl) {
 				auto ctx =  new SSLContext(SSLContextKind.client);
-				ctx.peerValidationMode = SSLPeerValidationMode.none;
+				if (!m_settings.sslverifycertificate) {
+					ctx.peerValidationMode = SSLPeerValidationMode.none;
+				}
+				
 				m_stream = new SSLStream(m_conn, ctx);
 			}
 			else {
@@ -581,7 +584,8 @@ bool parseMongoDBUrl(out MongoClientSettings cfg, string url)
 				case "journal": setBool(cfg.journal); break;
 				case "connecttimeoutms": setLong(cfg.connectTimeoutMS); warnNotImplemented(); break;
 				case "sockettimeoutms": setLong(cfg.socketTimeoutMS); warnNotImplemented(); break;
-				case "ssl": setBool(cfg.ssl); break;					
+				case "ssl": setBool(cfg.ssl); break;
+				case "sslverifycertificate": setBool(cfg.sslverifycertificate); break;
 				case "wtimeoutms": setLong(cfg.wTimeoutMS); break;
 				case "w":
 					try {
@@ -630,6 +634,7 @@ unittest
 	assert(cfg.connectTimeoutMS == long.init);
 	assert(cfg.socketTimeoutMS == long.init);
 	assert(cfg.ssl == bool.init);
+	assert(cfg.sslverifycertificate == true);
 
 	cfg = MongoClientSettings.init;
 	assert(parseMongoDBUrl(cfg, "mongodb://fred:foobar@localhost"));
@@ -652,7 +657,7 @@ unittest
 	assert(cfg.hosts[0].port == 27017);
 
 	cfg = MongoClientSettings.init;
-	assert(parseMongoDBUrl(cfg, "mongodb://host1,host2,host3/?safe=true&w=2&wtimeoutMS=2000&slaveOk=true&ssl=true"));
+	assert(parseMongoDBUrl(cfg, "mongodb://host1,host2,host3/?safe=true&w=2&wtimeoutMS=2000&slaveOk=true&ssl=true&sslverifycertificate=false"));
 	assert(cfg.username == "");
 	//assert(cfg.password == "");
 	assert(cfg.digest == "");
@@ -669,6 +674,7 @@ unittest
 	assert(cfg.wTimeoutMS == 2000);
 	assert(cfg.defQueryFlags == QueryFlags.SlaveOk);
 	assert(cfg.ssl == true);
+	assert(cfg.sslverifycertificate == false);
 
 	cfg = MongoClientSettings.init;
 	assert(parseMongoDBUrl(cfg,
@@ -791,6 +797,7 @@ class MongoClientSettings
 	long connectTimeoutMS;
 	long socketTimeoutMS;
 	bool ssl;
+	bool sslverifycertificate = true;
 
 	static string makeDigest(string username, string password)
 	{
