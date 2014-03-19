@@ -140,9 +140,8 @@ class MongoConnection {
 			m_conn = connectTCP(m_settings.hosts[0].name, m_settings.hosts[0].port);
 			if (m_settings.ssl) {
 				auto ctx =  new SSLContext(SSLContextKind.client);
-				//here
+				ctx.peerValidationMode = SSLPeerValidationMode.none;
 				m_stream = new SSLStream(m_conn, ctx);
-				//m_stream = new SSLStream(m_conn, SSLContextKind.client);
 			}
 			else {
 				m_stream = m_conn;
