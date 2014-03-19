@@ -563,6 +563,7 @@ bool parseMongoDBUrl(out MongoClientSettings cfg, string url)
 				case "journal": setBool(cfg.journal); break;
 				case "connecttimeoutms": setLong(cfg.connectTimeoutMS); warnNotImplemented(); break;
 				case "sockettimeoutms": setLong(cfg.socketTimeoutMS); warnNotImplemented(); break;
+				case "ssl": setBool(cfg.ssl); break;					
 				case "wtimeoutms": setLong(cfg.wTimeoutMS); break;
 				case "w":
 					try {
@@ -610,6 +611,7 @@ unittest
 	assert(cfg.journal == false);
 	assert(cfg.connectTimeoutMS == long.init);
 	assert(cfg.socketTimeoutMS == long.init);
+	assert(cfg.ssl == bool.init);
 
 	cfg = MongoClientSettings.init;
 	assert(parseMongoDBUrl(cfg, "mongodb://fred:foobar@localhost"));
@@ -632,7 +634,7 @@ unittest
 	assert(cfg.hosts[0].port == 27017);
 
 	cfg = MongoClientSettings.init;
-	assert(parseMongoDBUrl(cfg, "mongodb://host1,host2,host3/?safe=true&w=2&wtimeoutMS=2000&slaveOk=true"));
+	assert(parseMongoDBUrl(cfg, "mongodb://host1,host2,host3/?safe=true&w=2&wtimeoutMS=2000&slaveOk=true&ssl=true"));
 	assert(cfg.username == "");
 	//assert(cfg.password == "");
 	assert(cfg.digest == "");
@@ -648,6 +650,7 @@ unittest
 	assert(cfg.w == Bson(2L));
 	assert(cfg.wTimeoutMS == 2000);
 	assert(cfg.defQueryFlags == QueryFlags.SlaveOk);
+	assert(cfg.ssl == true);
 
 	cfg = MongoClientSettings.init;
 	assert(parseMongoDBUrl(cfg,
@@ -769,6 +772,7 @@ class MongoClientSettings
 	bool journal;
 	long connectTimeoutMS;
 	long socketTimeoutMS;
+	bool ssl;
 
 	static string makeDigest(string username, string password)
 	{
