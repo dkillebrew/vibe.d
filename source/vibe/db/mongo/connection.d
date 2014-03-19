@@ -12,6 +12,7 @@ public import vibe.data.bson;
 import vibe.core.log;
 import vibe.core.net;
 import vibe.inet.webform;
+import vibe.stream.ssl;
 
 import std.algorithm : splitter;
 import std.array;
@@ -105,6 +106,7 @@ class MongoConnection {
 	private {
 		MongoClientSettings m_settings;
 		TCPConnection m_conn;
+		Stream m_stream;
 		ulong m_bytesRead;
 		int m_msgid = 1;
 	}
@@ -134,10 +136,22 @@ class MongoConnection {
 		 * TODO: Connect to one of the specified hosts taking into consideration
 		 * options such as connect timeouts and so on.
 		 */
-		try m_conn = connectTCP(m_settings.hosts[0].name, m_settings.hosts[0].port);
+		try {
+			m_conn = connectTCP(m_settings.hosts[0].name, m_settings.hosts[0].port);
+			if (m_settings.ssl) {
+				auto ctx =  new SSLContext(SSLContextKind.client);
+				//here
+				m_stream = new SSLStream(m_conn, ctx);
+				//m_stream = new SSLStream(m_conn, SSLContextKind.client);
+			}
+			else {
+				m_stream = m_conn;
+			}
+		}
 		catch (Exception e) {
 			throw new MongoDriverException(format("Failed to connect to MongoDB server at %s:%s.", m_settings.hosts[0].name, m_settings.hosts[0].port), __FILE__, __LINE__, e);
 		}
+
 		m_bytesRead = 0;
 		if(m_settings.digest != string.init)
 		{
@@ -147,6 +161,11 @@ class MongoConnection {
 
 	void disconnect()
 	{
+		if (m_stream) {
+			m_stream.finalize();
+			m_stream = null;
+		}
+
 		if (m_conn) {
 			m_conn.close();
 			m_conn = null;
@@ -357,13 +376,13 @@ class MongoConnection {
 		sendInt(response_to);
 		sendInt(req.m_opCode);
 		send(req.m_data.data);
-		m_conn.flush();
+		m_stream.flush();
 		return id;
 	}
 
 	private void sendInt(int v) { send(toBsonData(v)); }
 	private void sendLong(long v) { send(toBsonData(v)); }
-	private void send(in ubyte[] data){ m_conn.write(data); }
+	private void send(in ubyte[] data){ m_stream.write(data); }
 
 	private int recvInt() { ubyte[int.sizeof] ret; recv(ret); return fromBsonData!int(ret); }
 	private long recvLong() { ubyte[long.sizeof] ret; recv(ret); return fromBsonData!long(ret); }
@@ -373,7 +392,7 @@ class MongoConnection {
 		recv(bson);
 		return Bson(Bson.Type.Object, cast(immutable)(toBsonData(len) ~ bson));
 	}
-	private void recv(ubyte[] dst) { enforce(m_conn); m_conn.read(dst); m_bytesRead += dst.length; }
+	private void recv(ubyte[] dst) { enforce(m_stream); m_stream.read(dst); m_bytesRead += dst.length; }
 
 	private int nextMessageId() { return m_msgid++; }
 
